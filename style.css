@@ -19,3 +19,7 @@ h1 {
 .axis--x .tick:nth-child(4){
   opacity: 0;
 }
+
+.axis--y{
+  background-color:#fff
+}

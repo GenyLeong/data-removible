@@ -3,12 +3,14 @@
 
 // prints "hi" in the browser's dev tools console
 var svg = d3.select("svg"),
-  margin = { top: 80, right: 20, bottom: 30, left: 50 },
+  margin = { top: 80, right: 20, bottom: 30, left: 40 },
   width = +svg.attr("width") - margin.left - margin.right,
   height = +svg.attr("height") - margin.top - margin.bottom,
   g = svg
     .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+  
+
 
 var parseDate = d3.timeParse("%Y/%m/%d");
 console.log(parseDate);
@@ -32,6 +34,14 @@ var area = d3
   .y1(function(d) {
     return y(d.kW);
   });
+
+
+svg.append("defs")
+    .append("clipPath")
+    .attr("id", "clip")
+    .append("rect")
+    .attr("width", width)
+    .attr("height", height); 
 
 d3.csv("data.csv", type, function(error, data) {
   if (error) throw error;
@@ -71,32 +81,12 @@ d3.csv("data.csv", type, function(error, data) {
     .attr("transform", "translate(0," + height + ")")
     .call(d3.axisBottom(x).ticks(d3.timeDay.every(5)));
 
-  /*var source = g
-    .selectAll(".area")
-    .data(sources)
-    .enter()
-    .append("g")
-    .attr("class", function(d) {
-      return `area ${d.id}`;
-    });
 
-  source
-    .append("path")
-    .attr("d", function(d) {
-     console.log(area(d.values));
-      return area(d.values);
-    })
-    .style("fill", function(d) {
-      return z(d.id);
-    });
-   */
   var item = 0;
 
   var locations = data.forEach(function(d, i) {
     d.date = item;
     item = item + 1;
-
-    //console.log(data)
   });
 
   var min_year = d3.min(data, function(d) {
@@ -117,8 +107,11 @@ d3.csv("data.csv", type, function(error, data) {
     .attr("id", "year")
     .on("input", function input() {
       update();
+      tick()
     });
 
+  
+  
   function update() {
     var slider_year = document.getElementById("year").value;
 
@@ -143,7 +136,110 @@ d3.csv("data.csv", type, function(error, data) {
 
     console.log(sources_update);
 
-    //new_loc.concat(columns)
+         
+    d3.select("svg g")
+      .selectAll(".area")
+      .remove();
+    
+    d3.select("svg g")
+      .selectAll(".axis.axis--y")
+      .remove();
+
+    x.domain(
+      d3.extent(data, function(d) {
+        return d.date;
+      })
+    );
+    y.domain([
+      0,
+      d3.max(sources_update, function(c) {
+        return d3.max(c.values, function(d) {
+          return d.kW;
+        });
+      })
+    ]);
+    z.domain(
+      sources.map(function(c) {
+        return c.id;
+      })
+    );
+  
+    //1
+    
+    g.append("g")
+      .attr("class", "axis axis--y")
+      .call(d3.axisLeft(y))
+      .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 6)
+      .attr("dy", "0.71em")
+      .attr("fill", "#000")
+      .text("Power, kW");
+    
+   var source = g
+      .selectAll(".area")
+      .data(sources_update)
+      .enter()
+      .append("g")
+      .attr("clip-path", "url(#clip)")
+
+
+    var exit = source.exit();
+    
+    source
+      .append("path")
+      .attr("d", function(d) {
+        return area(d.values);
+      })
+    .attr("transform", function(d) { return `translate(${-d.values.length})`})
+    .attr("class", function(d) {
+        console.log(d);
+        return `area ${d.id}`;
+      })
+    .style("fill", function(d) {
+        return z(d.id);
+      })
+   
+    sources_update.shift();
+    console.log();
+    exit.remove();
+
+  }
+  
+  var duration = 1000;
+  var transition = d3
+            .transition() 
+            .duration(duration)
+            .ease(d3.easeLinear);
+  //tick();
+  
+  function tick() {
+
+      transition = transition
+        .each(function() {
+        
+             d3.selectAll(".area")
+              .attr("transform", null)
+
+               d3.selectAll(".area")
+                .transition(1000)
+                .attr("transform", function(d) { return `translate(${-d.values.length})`});
+        })
+        /*.transition(1000)
+        .duration(5000)*/
+  }
+  //tick()
+  update();
+});
+
+function type(d, _, columns) {
+  d.date = parseDate(d.date);
+  for (var i = 1, n = columns.length, c; i < n; ++i)
+    d[(c = columns[i])] = +d[c];
+  return d;
+}
+
+//new_loc.concat(columns)
 
     //new_loc['columns'].push(columns);
     /*new_loc = new_loc.map(function(elem){    
@@ -169,119 +265,24 @@ d3.csv("data.csv", type, function(error, data) {
         // not last one
       }
     })*/
-    var duration = 1000;
-    var transition = d3
-            .transition() 
-            .duration(duration)
-            .ease(d3.easeLinear);
-    tick();
-    function tick() {
-    
-    transition = transition
-      .each(function() {
-      //	if (pause) return
-        // update the domains
-        /*now = new Date();
-        xScale.domain([now - (n - 2) * duration, now - duration]);
-        // push the accumulated count onto the back, and reset the count
-        data.push(random());*/
 
-      
-      	// Redraw the area.
-        /*d3.selectAll('.area')
-          .attr("d", area)
-          
-          
-     		d3.selectAll('.area')
-          .transition(transition)
-          .attr("transform", `translate(100)`);*/
+//1
+  /*var source = g
+    .selectAll(".area")
+    .data(sources)
+    .enter()
+    .append("g")
+    .attr("class", function(d) {
+      return `area ${d.id}`;
+    });
 
-        // pop the old data point off the front
-        sources_update.shift();
-      })
-      .transition()
-      .on("start", tick);
-  }
-    
-    d3.select("svg g")
-      .selectAll(".area")
-      .remove();
-    d3.select("svg g")
-      .selectAll(".axis.axis--y")
-      .remove();
-
-    x.domain(
-      d3.extent(data, function(d) {
-        return d.date;
-      })
-    );
-    y.domain([
-      0,
-      d3.max(sources_update, function(c) {
-        return d3.max(c.values, function(d) {
-          return d.kW;
-        });
-      })
-    ]);
-    z.domain(
-      sources.map(function(c) {
-        return c.id;
-      })
-    );
-    
-    g.append("g")
-      .attr("class", "axis axis--y")
-      .call(d3.axisLeft(y))
-      .append("text")
-      .attr("transform", "rotate(-90)")
-      .attr("y", 6)
-      .attr("dy", "0.71em")
-      .attr("fill", "#000")
-      .text("Power, kW");
-
-    var source = g
-      .selectAll(".area")
-      .data(sources_update)
-      .enter()
-      .append("g")
-      .attr("class", function(d) {
-        console.log(d);
-        return `area ${d.id}`;
-      });
-
-    var exit = source.exit();
-    sources_update.shift();
-
-    source
-      .append("path")
-      .attr("d", function(d) {
-        //console.log(area(d.values));
-        return area(d.values);
-      })
-    .attr("transform", null)
+  source
+    .append("path")
+    .attr("d", function(d) {
+     console.log(area(d.values));
+      return area(d.values);
+    })
     .style("fill", function(d) {
-        return z(d.id);
-      })
-    
-    source
-          .transition(transition)
-          .attr("transform", `translate(100)`);
-          
-    /*source
-          .transition(1000)
-          .attr("transform",function(d) { return `translate(${d.values.length})`})*/
-    
-    //sources_update.shift()
-    console.log();
-    exit.remove();
-  }
-
-  update();
-});
-
-function type(d, _, columns) {
-  d.date = parseDate(d.date);
-  for (var i = 1, n = columns.length, c; i < n; ++i)
-    d[(c = columns[i])] = +d[c];
-  return d;
-}
+      return z(d.id);
+    });
+   */
