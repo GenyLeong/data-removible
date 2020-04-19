@@ -10,12 +10,34 @@ h1 {
   color: #373fff;
 }
 
-#year{
-  display: block;
-    position: absolute;
-    top: 15%;
+#year, .text-day{
+  display: inline-block;
 }
 
 .axis--x .tick:nth-child(4){
   opacity: 0;
 }
+
+.axis--y{
+  background-color:#fff
+}
+
+.text-day{
+      margin: 0px 1px 0px 10px;
+    position: relative;
+    bottom: 5px;
+}
+
+.slider{
+  min-height: 50px;
+}
+
+.focus circle {
+        fill: black;
+        stroke: white;
+    }
+
+/*.overlay {
+        fill: none;
+        pointer-events: all;
+    }*/
