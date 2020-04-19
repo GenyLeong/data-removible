@@ -10,8 +10,6 @@ var svg = d3.select("svg"),
     .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
   
-
-
 var parseDate = d3.timeParse("%Y/%m/%d");
 console.log(parseDate);
 
@@ -29,12 +27,19 @@ var area = d3
   .curve(d3.curveMonotoneX)
   .x(function(d) {
     return x(d.date);
+    //console.log(d.date)
   })
   .y0(y(0))
   .y1(function(d) {
     return y(d.kW);
   });
 
+var now = new Date(2016, 6, 30 - 22);
+console.log(now)
+
+var xScale = d3.scaleTime()
+  	.domain([now - (100 - 2) * 22, now - 22])
+    .range([0, width]);
 
 svg.append("defs")
     .append("clipPath")
@@ -43,7 +48,11 @@ svg.append("defs")
     .attr("width", width)
     .attr("height", height); 
 
-d3.csv("data.csv", type, function(error, data) {
+var bisectDate = d3.bisector(function(d) {
+            return d.date;
+        }).left;
+
+d3.csv("data-backup.csv", type, function(error, data) {
   if (error) throw error;
 
   var sources = data.columns.slice(1).map(function(id) {
@@ -79,26 +88,26 @@ d3.csv("data.csv", type, function(error, data) {
   g.append("g")
     .attr("class", "axis axis--x")
     .attr("transform", "translate(0," + height + ")")
-    .call(d3.axisBottom(x).ticks(d3.timeDay.every(5)));
+    .call(d3.axisBottom(x).ticks(d3.timeDay.every(6)));
 
 
   var item = 0;
 
   var locations = data.forEach(function(d, i) {
-    d.date = item;
+    d.day = item;
     item = item + 1;
   });
 
   var min_year = d3.min(data, function(d) {
-      return d["date"];
+      return d["day"];
     }),
     max_year = d3.max(data, function(d) {
-      return d["date"];
+      return d["day"];
     });
 
   console.log(min_year, "---", max_year);
 
-  d3.select("body")
+  d3.select(".slider")
     .append("input")
     .attr("type", "range")
     .attr("min", min_year)
@@ -110,17 +119,57 @@ d3.csv("data.csv", type, function(error, data) {
       tick()
     });
 
+  var focus = svg.append("g")
+                .attr("class", "focus")
+                .style("display", "none");
+
+            focus.append("circle")
+                .attr("r", 5);
+
+            focus.append("text")
+                .attr("x", 9)
+                .attr("dy", ".35em")
+                .style("font-size",15);
+                
+            var focus2 = svg.append("g")
+                .attr("class", "focus")
+                .style("display", "none");
+
+            focus2.append("circle")
+                .attr("r",5);
+
+            focus2.append("text")
+                .attr("x", 149)
+                .attr("dy", ".35em")
+                .style("font-size",15);
   
+  
+            
   
   function update() {
+       
     var slider_year = document.getElementById("year").value;
 
     var new_loc = data.filter(function filter_by_year(d) {
-      if (d["date"] <= slider_year) {
-        return true;
+      if (d["day"] <= slider_year) {
+        return true;        
       }
-    });
 
+    });
+    
+    /*svg.append("rect")    
+                .attr("class", "overlay")
+                .attr("width", width)
+                .attr("height", height)
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")")*/
+                
+    
+    d3.selectAll(".text-day").remove();
+     d3.select('.slider')
+         .append('div')    
+    .attr("class", "text-day")
+          .html('<br/>' + slider_year + " día(s) de cuarentena");
+    
     new_loc["columns"] = ["date", "PVkW", "TBLkW"];
 
     console.log(new_loc);
@@ -135,8 +184,28 @@ d3.csv("data.csv", type, function(error, data) {
     });
 
     console.log(sources_update);
+    
+    
+    function mousemove(d) {
+      
+      //var data= sources_update[0].values
+      console.log(d)
+       /*var x0 = x.invert(d3.mouse(this)[0]),
+            i = bisectDate(data, x0, 1),
+            d0 = data[i - 1],
+            d1 = data[i],
+            d= x0 - d0.date > d1.date - x0 ? d1 : d0;
+        console.log(d0, d1)
+          var depl=parseFloat(d['PVkW']);
+          var depl2=parseFloat(d['TBLkW']);
+          focus.attr("transform", "translate(" + x(d0.date) + "," + (height-depl2)+ ")"); 
+          //focus2.attr("transform", "translate(" + x(d1.date-d0.date) + "," + (height-depl2 + depl)+ ")");   
 
-         
+          focus.select("text").text(depl);
+          focus2.select("text").text(depl2);*/
+
+    }
+    
     d3.select("svg g")
       .selectAll(".area")
       .remove();
@@ -163,8 +232,6 @@ d3.csv("data.csv", type, function(error, data) {
         return c.id;
       })
     );
-  
-    //1
     
     g.append("g")
       .attr("class", "axis axis--y")
@@ -180,18 +247,30 @@ d3.csv("data.csv", type, function(error, data) {
       .selectAll(".area")
       .data(sources_update)
       .enter()
-      .append("g")
-      .attr("clip-path", "url(#clip)")
+      .append("g").each(function(d,i){
+        d3.select(this).on("mouseover", function() {
+                    focus.style("display", null);
+                    focus2.style("display", null);
+                })
+                .on("mouseout", function() {
+                    focus.style("display", "none");
+                    focus2.style("display", "none");
 
-
-    var exit = source.exit();
+                })
+                .on("mousemove", function(d) {
+        console.log(d)
+      })
+    })
+      
+   var exit = source.exit();
     
     source
       .append("path")
       .attr("d", function(d) {
         return area(d.values);
-      })
-    .attr("transform", function(d) { return `translate(${-d.values.length})`})
+      }).attr("clip-path", "url(#clip)")
+      
+    //.attr("transform", `translate(${xScale(now - (100 - 1) * 1000)})`)
     .attr("class", function(d) {
         console.log(d);
         return `area ${d.id}`;
@@ -200,13 +279,20 @@ d3.csv("data.csv", type, function(error, data) {
         return z(d.id);
       })
    
-    sources_update.shift();
+    var bisectDate = d3.bisector(function(a, b) {
+      return a.date - b.date
+
+    }).left;
+  console.log(bisectDate)
+
+   
     console.log();
     exit.remove();
+    sources_update.shift();
 
   }
   
-  var duration = 1000;
+  var duration = 72;
   var transition = d3
             .transition() 
             .duration(duration)
@@ -217,18 +303,27 @@ d3.csv("data.csv", type, function(error, data) {
 
       transition = transition
         .each(function() {
+          now = new Date(2016, 6, 30);
+        xScale.domain([now - (100 - 2) * 50, now - 50]);
+        
+        console.log(now)
+         d3.select(".axis--x")
+          .transition(1000)
+          .call(d3.axisBottom(x))
         
              d3.selectAll(".area")
               .attr("transform", null)
 
                d3.selectAll(".area")
                 .transition(1000)
-                .attr("transform", function(d) { return `translate(${-d.values.length})`});
+                .attr("transform", `translate(${xScale(now - (100 - 1) * 50)})`)
         })
         /*.transition(1000)
         .duration(5000)*/
   }
-  //tick()
+  
+    
+  
   update();
 });
 
@@ -239,50 +334,3 @@ function type(d, _, columns) {
   return d;
 }
 
-//new_loc.concat(columns)
-
-    //new_loc['columns'].push(columns);
-    /*new_loc = new_loc.map(function(elem){    
-      return {"columns":elem};
-    })
-    
-    var rowLen = new_loc.length
-    
-    new_loc = new_loc.map(function(elem, i){
-      if (rowLen === i + 1) {
-        return {"columns":elem};
-      } else {
-      }
-    })
-    
-    /*const rowLen = new_loc.length;
-    
-    new_loc.map((elem, i) => {
-      console.log(elem, i)
-      if (rowLen === i + 1) {
-        return {"columns":elem};
-      } else {
-        // not last one
-      }
-    })*/
-
-//1
-  /*var source = g
-    .selectAll(".area")
-    .data(sources)
-    .enter()
-    .append("g")
-    .attr("class", function(d) {
-      return `area ${d.id}`;
-    });
-
-  source
-    .append("path")
-    .attr("d", function(d) {
-     console.log(area(d.values));
-      return area(d.values);
-    })
-    .style("fill", function(d) {
-      return z(d.id);
-    });
-   */
