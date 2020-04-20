@@ -1,17 +1,57 @@
 /* If you're feeling fancy you can add interactivity 
     to your site with Javascript */
 
-// prints "hi" in the browser's dev tools console
-var svg = d3.select("svg"),
-  margin = { top: 80, right: 20, bottom: 30, left: 40 },
-  width = +svg.attr("width") - margin.left - margin.right,
-  height = +svg.attr("height") - margin.top - margin.bottom,
+var x = window.matchMedia("(max-width: 600px)")
+if (x.matches) { // If media query matches
+  document.body.style.backgroundColor = "white";
+  var svg = d3.select("svg"),
+  margin = { top: 80, right: 10, bottom: 30, left: 35 };
+  
+  var mySVG = document.getElementById("chart");
+    mySVG.setAttribute("width",  360);
+    mySVG.setAttribute("height", 360);
+  
+ var width = +320 - margin.right,
+  height = +320 - margin.top - margin.bottom,
   g = svg
     .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+} else {
+ document.body.style.backgroundColor = "pink";
+ var svg = d3.select("svg"),
+  margin = { top: 80, right: 20, bottom: 30, left: 40 };
+  
+  var mySVG = document.getElementById("chart");
+    mySVG.setAttribute("width",  500);
+    mySVG.setAttribute("height", 500);
+  
+  var width = +500 - margin.left - margin.right,
+      height = +500 - margin.top - margin.bottom,
+      g = svg
+        .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+}
+
   
 var parseDate = d3.timeParse("%Y/%m/%d");
 console.log(parseDate);
+
+var es_ES = {
+  "decimal": ",",
+  "thousands": ".",
+  "grouping": [3],
+  "currency": ["€", ""],
+  "dateTime": "%a %b %e %X %Y",
+  "date": "%d/%m/%Y",
+  "time": "%H:%M:%S",
+  "periods": ["AM", "PM"],
+  "days": ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"],
+  "shortDays": ["Dom", "Lun", "Mar", "Mi", "Jue", "Vie", "Sab"],
+  "months": ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"],
+  "shortMonths": ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+};
+
+var ES = d3.timeFormatDefaultLocale(es_ES);
 
 var color = d3
   .scaleOrdinal()
@@ -34,26 +74,8 @@ var area = d3
     return y(d.kW);
   });
 
-var now = new Date(2016, 6, 30 - 22);
-console.log(now)
-
-var xScale = d3.scaleTime()
-  	.domain([now - (100 - 2) * 22, now - 22])
-    .range([0, width]);
-
-svg.append("defs")
-    .append("clipPath")
-    .attr("id", "clip")
-    .append("rect")
-    .attr("width", width)
-    .attr("height", height); 
-
-var bisectDate = d3.bisector(function(d) {
-            return d.date;
-        }).left;
-
 d3.csv("data-backup.csv", type, function(error, data) {
-  if (error) throw error;
+  if (error) throw error;  
 
   var sources = data.columns.slice(1).map(function(id) {
     return {
@@ -66,30 +88,10 @@ d3.csv("data-backup.csv", type, function(error, data) {
 
   console.log(data, sources);
 
-  x.domain(
-    d3.extent(data, function(d) {
-      return d.date;
-    })
-  )
-  y.domain([
-    0,
-    d3.max(sources, function(c) {
-      return d3.max(c.values, function(d) {
-        return d.kW;
-      });
-    })
-  ]);
-  z.domain(
-    sources.map(function(c) {
-      return c.id;
-    })
-  );
-
   g.append("g")
     .attr("class", "axis axis--x")
     .attr("transform", "translate(0," + height + ")")
-    .call(d3.axisBottom(x).ticks(d3.timeDay.every(6)));
-
+    .call(d3.axisBottom(x).ticks(d3.timeDay.every(5)));
 
   var item = 0;
 
@@ -116,65 +118,30 @@ d3.csv("data-backup.csv", type, function(error, data) {
     .attr("id", "year")
     .on("input", function input() {
       update();
-      tick()
+      //tick()
     });
-
-  var focus = svg.append("g")
-                .attr("class", "focus")
-                .style("display", "none");
-
-            focus.append("circle")
-                .attr("r", 5);
-
-            focus.append("text")
-                .attr("x", 9)
-                .attr("dy", ".35em")
-                .style("font-size",15);
-                
-            var focus2 = svg.append("g")
-                .attr("class", "focus")
-                .style("display", "none");
-
-            focus2.append("circle")
-                .attr("r",5);
-
-            focus2.append("text")
-                .attr("x", 149)
-                .attr("dy", ".35em")
-                .style("font-size",15);
-  
-  
-            
-  
+ 
   function update() {
-       
-    var slider_year = document.getElementById("year").value;
+    var slider_year = document.getElementById("year").value; 
+
+    var now = new Date(data[slider_year].date);
+    console.log(data, now)
 
     var new_loc = data.filter(function filter_by_year(d) {
       if (d["day"] <= slider_year) {
         return true;        
       }
-
     });
-    
-    /*svg.append("rect")    
-                .attr("class", "overlay")
-                .attr("width", width)
-                .attr("height", height)
-                .attr("transform", "translate(" + margin.left + "," + margin.top + ")")*/
-                
-    
+     
     d3.selectAll(".text-day").remove();
      d3.select('.slider')
          .append('div')    
     .attr("class", "text-day")
           .html('<br/>' + slider_year + " día(s) de cuarentena");
     
-    new_loc["columns"] = ["date", "PVkW", "TBLkW"];
+    new_loc["columns"] = ["day","date", "PVkW", "TBLkW"];
 
-    console.log(new_loc);
-
-    var sources_update = new_loc.columns.slice(1).map(function(id) {
+    var sources_update = new_loc.columns.slice(2).map(function(id) {
       return {
         id: id,
         values: new_loc.map(function(d) {
@@ -182,29 +149,6 @@ d3.csv("data-backup.csv", type, function(error, data) {
         })
       };
     });
-
-    console.log(sources_update);
-    
-    
-    function mousemove(d) {
-      
-      //var data= sources_update[0].values
-      console.log(d)
-       /*var x0 = x.invert(d3.mouse(this)[0]),
-            i = bisectDate(data, x0, 1),
-            d0 = data[i - 1],
-            d1 = data[i],
-            d= x0 - d0.date > d1.date - x0 ? d1 : d0;
-        console.log(d0, d1)
-          var depl=parseFloat(d['PVkW']);
-          var depl2=parseFloat(d['TBLkW']);
-          focus.attr("transform", "translate(" + x(d0.date) + "," + (height-depl2)+ ")"); 
-          //focus2.attr("transform", "translate(" + x(d1.date-d0.date) + "," + (height-depl2 + depl)+ ")");   
-
-          focus.select("text").text(depl);
-          focus2.select("text").text(depl2);*/
-
-    }
     
     d3.select("svg g")
       .selectAll(".area")
@@ -215,8 +159,10 @@ d3.csv("data-backup.csv", type, function(error, data) {
       .remove();
 
     x.domain(
-      d3.extent(data, function(d) {
-        return d.date;
+      d3.extent(new_loc, function(d) {
+        var seconds = d.date
+        now = new Date(seconds)
+        return now;
       })
     );
     y.domain([
@@ -247,20 +193,7 @@ d3.csv("data-backup.csv", type, function(error, data) {
       .selectAll(".area")
       .data(sources_update)
       .enter()
-      .append("g").each(function(d,i){
-        d3.select(this).on("mouseover", function() {
-                    focus.style("display", null);
-                    focus2.style("display", null);
-                })
-                .on("mouseout", function() {
-                    focus.style("display", "none");
-                    focus2.style("display", "none");
-
-                })
-                .on("mousemove", function(d) {
-        console.log(d)
-      })
-    })
+      .append("g")
       
    var exit = source.exit();
     
@@ -268,63 +201,106 @@ d3.csv("data-backup.csv", type, function(error, data) {
       .append("path")
       .attr("d", function(d) {
         return area(d.values);
-      }).attr("clip-path", "url(#clip)")
-      
-    //.attr("transform", `translate(${xScale(now - (100 - 1) * 1000)})`)
-    .attr("class", function(d) {
+      })
+      .attr("clip-path", "url(#clip)")
+      .attr("class", function(d) {
         console.log(d);
         return `area ${d.id}`;
       })
-    .style("fill", function(d) {
-        return z(d.id);
-      })
-   
-    var bisectDate = d3.bisector(function(a, b) {
-      return a.date - b.date
+      .style("fill", function(d) {
+          return z(d.id);
+      }).on("mousemove", function(d) {
+        return handleMouseMove(d);
+    })
+      .on('mouseout', handleMouseOut);
 
-    }).left;
-  console.log(bisectDate)
-
-   
-    console.log();
-    exit.remove();
-    sources_update.shift();
-
-  }
-  
-  var duration = 72;
   var transition = d3
             .transition() 
-            .duration(duration)
+            .duration(100)
             .ease(d3.easeLinear);
-  //tick();
-  
+ 
   function tick() {
-
+          
       transition = transition
         .each(function() {
-          now = new Date(2016, 6, 30);
-        xScale.domain([now - (100 - 2) * 50, now - 50]);
-        
-        console.log(now)
-         d3.select(".axis--x")
-          .transition(1000)
-          .call(d3.axisBottom(x))
-        
-             d3.selectAll(".area")
-              .attr("transform", null)
 
-               d3.selectAll(".area")
-                .transition(1000)
-                .attr("transform", `translate(${xScale(now - (100 - 1) * 50)})`)
+        d3.select(".axis--x")
+        .attr("transform", "translate(0," + height + ")")
+        .transition(1000)
+        .call(d3.axisBottom(x).ticks(d3.timeDay.every(5)))
         })
-        /*.transition(1000)
-        .duration(5000)*/
+  }
+    tick()
+    exit.remove();
+    new_loc.shift();
+
+    const focus = d3.select("svg g").append('g')
+                    .attr('class', 'focus')
+                    .style('display', 'none');
+
+  focus.append('circle')
+  .style("fill", "#FFF")
+    .attr('r', 4);
+
+  focus.append('line')
+    .classed('y', true);
+
+   // This allows to find the closest X index of the mouse:
+  var bisectDate = d3.bisector(function(d) {
+      return d.date;
+  }).left;
+
+  function handleMouseMove(data) {
+    
+    //console.log(data)
+    data = data.values
+
+    const currentXPosition = d3.event.pageX;
+    //const currentYPosition = d3.event.pageY;
+    // Get the x value of the current X position
+    const xValue = x.invert(currentXPosition-60);
+    
+    // Get the index of the xValue relative to the dataSet
+    const dataIndex = bisectDate(data, xValue, 0);
+    console.log(new_loc)
+    const leftData = data[dataIndex - 2];
+    const rightData = data[dataIndex-1];
+
+    var left_time = new Date(leftData.date)
+    var right_time = new Date(rightData.date)
+
+    console.log(leftData, rightData, left_time, right_time)
+    var tipo = ""
+    for (let i = 0; i < new_loc.length; i++) {
+      const element = new_loc[i];
+      if(element.PVkW==rightData.kW){
+          tipo = "infectados"
+      }
+      else if (element.TBLkW==rightData.kW){
+        tipo = "fallecidos"
+      }
+    }
+
+    d3.select('.year1').text(`${right_time} : ${rightData.kW} ${tipo}`)
+
+    focus.style('display', null)
+    focus.attr('transform', `translate(${currentXPosition- 60}, ${y(rightData.kW)})`);
+    focus.select('line.y')
+        .attr('x1', 0)
+        .attr('x2', 0)
+        .attr('y1', 0)
+        .attr('y2', height -`${y(rightData.kW)}`);
+  }
+
+  function handleMouseOut() {
+    focus.style('display', 'none')
+    d3.select('.year1').text('');
+    d3.select('.year2').text('')
   }
   
-    
+  }
   
-  update();
+  update();  
 });
 
 function type(d, _, columns) {
@@ -333,4 +309,3 @@ function type(d, _, columns) {
     d[(c = columns[i])] = +d[c];
   return d;
 }
-
